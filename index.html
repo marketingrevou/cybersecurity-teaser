@@ -416,10 +416,12 @@
     pointer-events: none;
     transition: left 1.2s cubic-bezier(.4,0,.2,1), transform 1.2s cubic-bezier(.4,0,.2,1);
   }
-  /* Mobile: during the countdown, slide the logo pill horizontally to centre
-     (X axis only — it keeps its original top position) and hold it there. */
+  /* Mobile: from the countdown onward, the logo pill slides horizontally to
+     centre (X axis only — it keeps its original top position) and stays there
+     through the final scene. */
   @media (max-width: 879px) {
-    .app[data-countdown="1"] .logo-pill {
+    .app[data-countdown="1"] .logo-pill,
+    .app[data-scene="4"] .logo-pill {
       left: 50%;
       transform: translateX(-50%);
     }
