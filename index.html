@@ -272,7 +272,7 @@
     display: block; width: 100%; border: 1px solid transparent; cursor: pointer;
     background: var(--amber); color: var(--amber-ink);
     font-family: var(--sans); font-size: 15px; font-weight: 700; letter-spacing: -.01em;
-    padding: 15px; border-radius: var(--r-btn); text-align: center;
+    padding: 15px; border-radius: var(--r-btn); text-align: center; text-decoration: none;
     transition: transform .12s ease, filter .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
     position: relative; overflow: hidden;
   }
@@ -694,15 +694,11 @@
           </div>
         </div>
 
-        <!-- Right: WhatsApp capture as a prominent card -->
+        <!-- Right: program CTA card -->
         <div class="atf-col-right">
           <div class="capture-card" id="capture">
-            <p class="capture-q">Jadi yang pertama tau ketika pendaftaran dibuka!</p>
-            <form id="waForm" novalidate>
-              <input class="wa-input" id="waInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="nomor WhatsApp kamu">
-              <p class="field-err" id="waErr"></p>
-              <button class="btn" type="submit">Kabari saya</button>
-            </form>
+            <p class="capture-q">Tertarik untuk tahu lebih lanjut?</p>
+            <a class="btn" href="https://www.revou.co/binus-applied-cybersecurity?utm_ops=teaser" target="_blank" rel="noopener">Cek sekarang</a>
           </div>
         </div>
       </div>
@@ -1034,53 +1030,6 @@
     var start = setTimeout(function () { tick(0); }, lead);
     state.cdTimers.push(start);
   };
-
-  // ---- Program capture ----
-  // Google Apps Script Web App /exec URL. Replace with your own deployment URL.
-  var WA_ENDPOINT = "https://script.google.com/macros/s/AKfycbyjq6GLlAQZNzo2wit3JPc5qcGrjypkgWKvord6CKrYYAX0QdaJc7ckgFGbhouO9dIeKw/exec";
-
-  var form = document.getElementById("waForm");
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    var input = document.getElementById("waInput"), err = document.getElementById("waErr");
-    var raw = input.value.trim(), digits = raw.replace(/[^0-9]/g, "");
-    if (raw === "") { showFieldError(input, err, "Isi dulu nomor WhatsApp kamu ya."); return; }
-    if (digits.length < 8) { showFieldError(input, err, "Kayaknya nomornya belum lengkap."); return; }
-    input.classList.remove("error"); err.textContent = "";
-    sendLead(raw);
-    showSuccess();
-  });
-  function getSource() {
-    var m = new URLSearchParams(window.location.search).get("utm_source");
-    return m ? m : "direct";
-  }
-  function sendLead(raw) {
-    if (!WA_ENDPOINT || WA_ENDPOINT.indexOf("PASTE_YOUR_DEPLOYMENT_ID") !== -1) return;
-    var source = getSource();
-    var payload = JSON.stringify({ phone: raw, source: source });
-    try {
-      // text/plain avoids a CORS preflight that Apps Script can't answer.
-      fetch(WA_ENDPOINT, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: payload
-      }).catch(function () {});
-    } catch (e) {
-      // Fallback for very old browsers.
-      var img = new Image();
-      img.src = WA_ENDPOINT + "?phone=" + encodeURIComponent(raw) + "&source=" + encodeURIComponent(source);
-    }
-  }
-  function showFieldError(input, err, msg) { input.classList.add("error"); err.textContent = msg; input.focus(); }
-  function showSuccess() {
-    document.getElementById("capture").innerHTML =
-      '<div class="success fadein">' +
-        '<div class="check"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
-        '<p style="font-size:14.5px; font-weight:700; line-height:1.4">Sip! Kamu bakal jadi yang pertama kami kabari pas pendaftaran buka.</p>' +
-        '<p class="body" style="font-size:12.5px">Sampai ketemu di Applied Cybersecurity with AI.</p>' +
-      '</div>';
-  }
 
   // kick off the opening scene's life
   startTermFeed();
