@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Applied Cybersecurity with AI — RevoU × BINUS × AWS</title>
+<style>
+  :root {
+    --navy-0: #070A1A; --navy-1: #0B0F26; --navy-2: #0E1533; --navy-3: #131C40;
+    --term:   #080B18;
+    --line:   rgba(255,255,255,.08); --line-2: rgba(255,255,255,.14);
+    --amber:  #F5850F; --amber-2:#FFA23D; --amber-ink: #1A0E00;
+    --text:   #FFFFFF; --text-2: #AEB6CC; --text-3: #6E7796;
+    --med-bg: #2E1712; --med-fg: #E8896F;
+    --low-bg: #2C2410; --low-fg: #F0B75E;
+    --ok-fg:  #7BD69A; --ok-bg: #0F2318; --ok-border: #2F7B4E;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r-card: 16px; --r-btn: 9px; --r-row: 8px;
+    --ease: cubic-bezier(.65,0,.2,1);
+    /* Scene index drives the whole parallax descent. Set by JS on .app. */
+    --scene: 0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%; background: var(--navy-0);
+    font-family: var(--sans); color: var(--text);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100dvh; padding: 16px; }
+
+  .app {
+    width: 100%; max-width: 430px; min-width: 0; min-height: 660px; height: min(900px, 95dvh);
+    background: var(--navy-1);
+    border: 1px solid var(--line); border-radius: 22px;
+    overflow: hidden; position: relative;
+    box-shadow: 0 40px 90px rgba(0,0,0,.6);
+    isolation: isolate;
+    --pad-x: 24px;      /* horizontal padding, widened on desktop */
+    --content-max: none; /* content measure cap, set on desktop */
+  }
+
+  /* On roomy viewports the app becomes a wide landscape frame, content
+     pinned to a readable left column and the sphere living on the right —
+     mirroring the real landing page's above-the-fold split. */
+  @media (min-width: 880px) and (min-height: 560px) {
+    body { padding: 28px; }
+    .app {
+      max-width: 1120px; width: 100%;
+      height: min(720px, calc(100dvh - 56px)); min-height: 520px;
+      border-radius: 26px;
+      --pad-x: 64px;
+      --content-max: 560px;
+    }
+  }
+
+  /* Phones: fill the viewport edge-to-edge (no centered-card framing),
+     which is what a mobile user expects and guarantees no horizontal clip. */
+  @media (max-width: 480px) {
+    body { padding: 0; }
+    .app {
+      max-width: none; width: 100%;
+      height: 100dvh; min-height: 100dvh;
+      border: none; border-radius: 0;
+      --pad-x: 20px;
+    }
+  }
+
+  /* ============ THE WORLD (persistent, parallaxes as one continuous space) ============ */
+  .world { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .layer { position: absolute; left: 0; right: 0; will-change: transform; }
+
+  /* Depth 1 — deep ambient gradient wash (slowest). Tall so it can pan. */
+  .l-atmos {
+    top: -20%; height: 260%;
+    background:
+      radial-gradient(80% 30% at 78% 6%, rgba(43,63,150,.55) 0%, rgba(11,15,38,0) 60%),
+      radial-gradient(70% 24% at 20% 40%, rgba(43,63,150,.28) 0%, rgba(11,15,38,0) 60%),
+      radial-gradient(90% 26% at 50% 74%, rgba(245,133,15,.12) 0%, rgba(11,15,38,0) 60%),
+      linear-gradient(180deg, #0B0F26 0%, #090C1E 50%, #0B0F26 100%);
+    transform: translateY(calc(var(--scene) * -6%));
+    transition: transform 1s var(--ease);
+  }
+
+  /* Depth 2 — binary starfield (medium). Repeats vertically; drifts + pans. */
+  .l-field {
+    top: -30%; height: 300%;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='44'><text x='4' y='16' font-family='monospace' font-size='13' fill='%237E93E0'>0 1 0 1</text><text x='4' y='36' font-family='monospace' font-size='13' fill='%237E93E0'>1 0 1 0</text></svg>");
+    background-size: 52px 34px;
+    opacity: .06;
+    transform: translateY(calc(var(--scene) * -13%));
+    transition: transform 1s var(--ease);
+    animation: fieldDrift 26s linear infinite;
+  }
+  @keyframes fieldDrift { to { background-position: 52px 0; } }
+
+  /* Depth 3 — the rim-lit sphere (the Figma ellipse). Drifts up as we descend. */
+  .l-sphere {
+    top: 6%; right: -46%; width: 122%; aspect-ratio: 1/1; left: auto;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 12% 50%, rgba(58,86,190,.30) 0%, rgba(20,30,74,.16) 16%, rgba(9,13,32,0) 42%),
+      radial-gradient(circle at 30% 40%, #10163A 0%, #0A0E24 60%, #080B18 100%);
+    box-shadow:
+      inset 26px 0 40px -18px rgba(96,132,255,.85),
+      inset 6px 0 12px -4px rgba(150,180,255,.55),
+      -2px 0 60px -8px rgba(60,96,220,.45);
+    transform: translateY(calc(var(--scene) * -9%)) rotate(calc(var(--scene) * -4deg));
+    transition: transform 1.1s var(--ease);
+  }
+  .l-sphere::after {   /* slow breathing rim shimmer */
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    box-shadow: inset 20px 0 50px -20px rgba(150,180,255,.6);
+    animation: rimBreathe 6s ease-in-out infinite;
+  }
+  @keyframes rimBreathe { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+
+  /* On the final scene the sphere pulls into fuller view */
+  .app[data-scene="4"] .l-sphere { top: 8%; right: -40%; }
+
+  /* Desktop: sphere becomes the right-hand hero visual (smaller, offset right),
+     leaving the left column clear for content — like the real ATF split. */
+  @media (min-width: 880px) and (min-height: 560px) {
+    .l-sphere { top: 50%; right: -20%; width: 70%; transform: translateY(-50%) rotate(calc(var(--scene) * -3deg)); }
+    .app[data-scene="4"] .l-sphere { top: 50%; right: -14%; }
+    /* dampen the vertical descent so layers don't drift off a shorter frame */
+    .l-atmos { transform: translateY(calc(var(--scene) * -3%)); }
+    .l-field { transform: translateY(calc(var(--scene) * -7%)); }
+  }
+
+  /* ============ STAGE + SCREENS ============ */
+  .stage { position: absolute; inset: 0; z-index: 1; }
+
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 30px var(--pad-x) 24px;
+    opacity: 0; visibility: hidden;
+    transform: translateY(46px) scale(.985);
+    transition: opacity .55s var(--ease), transform .7s var(--ease), visibility .7s;
+    overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  }
+  .screen.active { opacity: 1; visibility: visible; transform: none; }
+
+  /* Mobile: the two columns are transparent wrappers that stack and flow
+     as one vertical column. The CTA (pulled out as a screen-level child on
+     narasi/pick) sits last and pins to the bottom. */
+  .col-left, .col-right { display: flex; flex-direction: column; width: 100%; }
+  .col-right { margin-top: 18px; }
+  .story > .cta { margin-top: 22px; } /* gap above CTA on mobile */
+
+  /* Desktop: each story scene becomes a real 2-column layout, filling the
+     width. Both columns descend together (they live inside .screen). */
+  @media (min-width: 880px) and (min-height: 560px) {
+    .story {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      grid-template-areas: "left right" "cta right";
+      align-content: center; align-items: center; gap: 20px 48px;
+      padding-top: 0; padding-bottom: 0;
+    }
+    .story .col-left  { grid-area: left;  justify-content: center; max-width: var(--content-max); }
+    .story .col-right { grid-area: right; margin-top: 0; align-items: stretch; justify-content: center; align-self: center; }
+    /* CTA under the left column, at a natural width */
+    .story > .cta { grid-area: cta; margin-top: 0; width: auto; min-width: 240px; justify-self: start; max-width: var(--content-max); }
+    /* fillers only matter in the tall phone card */
+    .story .spacer { display: none; }
+    #narasi .col-left, #transisi .col-left { gap: 4px; }
+    /* the empty transisi right column just lets the sphere show through */
+    #transisi .col-right { min-height: 1px; }
+    /* reveal's panel sits vertically centered, not stretched tall */
+    .col-right--mid { justify-content: center; }
+    /* program keeps its own ATF layout (nav flush top) */
+    #program { justify-content: flex-start; }
+  }
+  /* screens that were already passed exit upward (continuous descent feel) */
+  .screen.past { transform: translateY(-46px) scale(.985); }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--amber); margin-bottom: 16px;
+  }
+  .eyebrow.dim { color: var(--text-3); letter-spacing: .12em; }
+
+  h1 { font-size: 27px; line-height: 1.14; font-weight: 800; letter-spacing: -.02em; margin-bottom: 14px; }
+  h2 { font-size: 19px; line-height: 1.22; font-weight: 700; letter-spacing: -.01em; }
+  p.body { font-size: 14.5px; line-height: 1.55; color: var(--text-2); }
+  .accent { color: var(--amber); }
+  .spacer { flex: 1 1 auto; min-height: 14px; }
+
+  /* Staged entrance for a scene's content (rises in when scene activates) */
+  .rise { opacity: 0; transform: translateY(16px); }
+  .screen.active .rise { animation: riseIn .6s var(--ease) forwards; }
+  .screen.active .rise.d1 { animation-delay: .10s; }
+  .screen.active .rise.d2 { animation-delay: .20s; }
+  .screen.active .rise.d3 { animation-delay: .30s; }
+  .screen.active .rise.d4 { animation-delay: .40s; }
+  @keyframes riseIn { to { opacity: 1; transform: none; } }
+
+  /* Buttons */
+  .btn {
+    display: block; width: 100%; border: 1px solid transparent; cursor: pointer;
+    background: var(--amber); color: var(--amber-ink);
+    font-family: var(--sans); font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+    padding: 15px; border-radius: var(--r-btn); text-align: center;
+    transition: transform .12s ease, filter .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
+    position: relative; overflow: hidden;
+  }
+  .btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0) scale(.99); }
+  .btn:focus-visible { outline: 2px solid var(--amber-2); outline-offset: 3px; }
+  .btn.outline { background: transparent; border-color: rgba(245,133,15,.55); color: var(--amber); }
+  .btn.outline:hover { background: rgba(245,133,15,.08); }
+  .btn:disabled { background: transparent; border-color: var(--line-2); color: var(--text-3); cursor: not-allowed; transform: none; filter: none; }
+  /* desktop: buttons sit inline-left at a natural width, not full-bleed */
+  @media (min-width: 880px) and (min-height: 560px) {
+    #narasi > .btn, #reveal > .btn, #transisi > .btn {
+      width: auto; min-width: 220px; align-self: flex-start; margin-top: 26px;
+    }
+  }
+  /* sheen sweep on primary buttons */
+  .btn:not(.outline):not(:disabled)::after {
+    content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
+    transform: skewX(-18deg); animation: sheen 3.6s ease-in-out infinite; animation-delay: 1.2s;
+  }
+  @keyframes sheen { 0%,72% { left: -60%; } 88%,100% { left: 130%; } }
+
+  /* ---------- Screen: narasi (hero) ---------- */
+  #narasi .hero-panel {
+    margin-top: 18px; margin-bottom: 4px;
+    background: var(--term); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 13px 13px; box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    position: relative; overflow: hidden;
+  }
+  #narasi .hero-panel::before {   /* scanline sweep across the terminal */
+    content: ""; position: absolute; left: 0; right: 0; height: 40px; top: -40px;
+    background: linear-gradient(180deg, transparent, rgba(120,150,230,.10), transparent);
+    animation: scan 4.2s linear infinite;
+  }
+  @keyframes scan { to { top: 100%; } }
+  .term-bar { display: flex; align-items: center; gap: 6px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .term-dot { width: 8px; height: 8px; border-radius: 50%; background: #2A3560; }
+  .term-dot.live { background: var(--ok-fg); box-shadow: 0 0 0 0 rgba(123,214,154,.7); animation: livePulse 2s ease-out infinite; }
+  @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(123,214,154,.6); } 100% { box-shadow: 0 0 0 7px rgba(123,214,154,0); } }
+  .term-title { font-family: var(--mono); font-size: 9.5px; color: var(--text-3); margin-left: 6px; letter-spacing: .04em; }
+  .term-body { min-height: 62px; }
+  .term-line { font-family: var(--mono); font-size: 10.5px; color: #7E88AE; line-height: 1.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .term-line.new { animation: lineIn .4s var(--ease); }
+  @keyframes lineIn { from { opacity: 0; transform: translateY(6px); } }
+  .term-line .t { color: #5A648C; }
+  .term-line .sev-med { color: var(--med-fg); }
+  .term-line .sev-low { color: var(--low-fg); }
+  .cursor { display: inline-block; width: 7px; height: 13px; background: var(--amber); vertical-align: -2px; margin-left: 2px; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- Screen: pick ---------- */
+  .pick-head { font-size: 17px; font-weight: 700; line-height: 1.28; letter-spacing: -.01em; margin-bottom: 6px; }
+  .pick-head b { color: var(--amber); font-weight: 700; }
+  .pick-sub { font-size: 12.5px; color: var(--text-3); margin-bottom: 16px; }
+
+  .timer { display: flex; align-items: center; gap: 11px; margin-bottom: 16px; }
+  .timer-num { font-family: var(--mono); font-size: 12px; color: var(--text-2); min-width: 44px; letter-spacing: .04em; transition: color .3s ease; }
+  .timer-track { flex: 1; height: 4px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; position: relative; }
+  .timer-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--amber), var(--amber-2)); border-radius: 3px; transform-origin: left center; transition: transform 1s linear, background .3s ease; }
+  .timer-track::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); animation: shimmer 2.2s linear infinite; }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+  .timer.expired .timer-num { color: var(--med-fg); }
+  .timer.expired .timer-fill { background: var(--med-fg); }
+  .timer.expired .timer-track::after { animation: none; }
+
+  .signals { display: flex; flex-direction: column; gap: 8px; }
+
+  .arow {
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--navy-2); border: 1px solid var(--line); border-radius: var(--r-row);
+    padding: 11px 12px; cursor: pointer; text-align: left; width: 100%; font-family: var(--sans);
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease, opacity .4s ease;
+  }
+  /* stream-in: rows are visible by default; hidden only while JS arms the deal,
+     so a no-JS/timing fallback can never leave them permanently invisible */
+  .signals.arming .arow { opacity: 0; transform: translateY(12px); }
+  .signals.arming.dealt .arow { opacity: 1; transform: none; }
+  .arow:hover { background: var(--navy-3); border-color: var(--line-2); }
+  .arow:active { transform: scale(.995); }
+  .arow.selected {
+    border-color: var(--amber);
+    background: linear-gradient(0deg, rgba(245,133,15,.06), rgba(245,133,15,.06)), var(--navy-2);
+    box-shadow: 0 0 0 1px var(--amber), 0 6px 22px rgba(245,133,15,.18);
+  }
+  .arow.correct { border-color: var(--ok-border); background: var(--ok-bg); cursor: default; box-shadow: 0 0 0 1px var(--ok-border), 0 6px 22px rgba(47,123,78,.25); }
+  .arow.correct:hover { background: var(--ok-bg); }
+  .arow.dimmed { opacity: .35; filter: grayscale(.3); }
+
+  .atop { display: flex; align-items: center; gap: 9px; }
+  .pill { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 3px 6px; border-radius: 4px; flex-shrink: 0; letter-spacing: .06em; }
+  .pill.MED { background: var(--med-bg); color: var(--med-fg); }
+  .pill.LOW { background: var(--low-bg); color: var(--low-fg); }
+  .pill.OK  { background: var(--ok-bg); color: var(--ok-fg); }
+  .atxt { font-family: var(--mono); font-size: 11px; color: #C3CAD9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .arow.selected .atxt, .arow.correct .atxt { color: #E4E9F5; }
+  .agl { font-size: 10px; color: var(--text-3); line-height: 1.4; padding-left: 2px; }
+
+  .nudge { font-size: 11.5px; color: var(--low-fg); margin-top: 13px; text-align: center; opacity: 0; transition: opacity .35s ease; min-height: 15px; }
+  .nudge.show { opacity: 1; }
+  .pick-foot { margin-top: 18px; }
+
+  /* ---------- Screen: reveal ---------- */
+  .reveal-card {
+    display: flex; flex-direction: column; gap: 4px; position: relative;
+    background: var(--ok-bg); border: 1px solid var(--ok-border); border-radius: var(--r-row);
+    padding: 12px; margin-bottom: 18px;
+    box-shadow: 0 0 0 1px var(--ok-border), 0 10px 30px rgba(47,123,78,.2);
+  }
+  /* lock-on scanning ring pulse when reveal opens */
+  #reveal.active .reveal-card::after {
+    content: ""; position: absolute; inset: -1px; border-radius: var(--r-row);
+    border: 1.5px solid var(--ok-fg); opacity: 0;
+    animation: lockon 1.4s var(--ease) .25s 2;
+  }
+  @keyframes lockon {
+    0% { opacity: .9; transform: scale(1.06); }
+    60% { opacity: .25; transform: scale(1.0); }
+    100% { opacity: 0; transform: scale(1.0); }
+  }
+  .verdict { font-size: 11.5px; margin-bottom: 14px; }
+  .verdict.hit { color: var(--ok-fg); }
+  .verdict.miss { color: var(--med-fg); }
+
+  /* ---------- Screen: program (ATF hero) ---------- */
+  #program { padding-top: 0; padding-bottom: 0; }
+  /* #program manages its own padding via logobar + atf-body */
+  #program { padding-left: 0; padding-right: 0; }
+  #program > * { max-width: none; }   /* opt out of the content-column cap */
+  .logobar {
+    display: flex; align-items: center; gap: 12px; background: #FFFFFF;
+    padding: 13px var(--pad-x); border-bottom: 1px solid rgba(0,0,0,.06);
+    margin-bottom: 22px; position: relative; z-index: 2;
+  }
+  .logobar .sep { width: 1px; height: 20px; background: rgba(0,0,0,.12); flex-shrink: 0; }
+  .logo-revou { display: flex; align-items: center; gap: 6px; }
+  .logo-revou .mark { width: 22px; height: 22px; border-radius: 50%; background: #FFCE31; display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-weight: 800; font-size: 12px; color: #1A1A1A; }
+  .logo-revou .wm { font-family: var(--sans); font-weight: 800; font-size: 14px; color: #101010; letter-spacing: -.02em; }
+  .logo-binus { display: flex; flex-direction: column; line-height: 1; }
+  .logo-binus .b1 { font-family: var(--sans); font-weight: 800; font-size: 13px; color: #F47B20; letter-spacing: .02em; }
+  .logo-binus .b2 { font-family: var(--sans); font-weight: 600; font-size: 6.5px; color: #1C3F94; letter-spacing: .14em; margin-top: 2px; }
+  .logo-gn { font-family: var(--sans); font-weight: 800; font-size: 13.5px; letter-spacing: -.01em; }
+  .logo-gn .g1 { color: #2C7BE5; } .logo-gn .g2 { color: #E5484D; }
+
+  .atf-body { padding: 0 var(--pad-x); display: flex; flex-direction: column; flex: 1; position: relative; z-index: 1; }
+  .atf-body > * { max-width: var(--content-max); width: 100%; }
+  @media (min-width: 880px) and (min-height: 560px) {
+    .atf-body { justify-content: center; }
+    #program .btn[type="submit"] { width: auto; min-width: 240px; }
+    .wa-input { max-width: 380px; }
+  }
+
+  .atf-h { font-size: 25px; line-height: 1.12; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+  .atf-h .w { display: inline-block; }
+  #program.armed .atf-h .w { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  #program.active.armed .atf-h .w { animation: wordIn .55s cubic-bezier(.2,.75,.25,1) forwards; }
+  #program.active.armed .atf-h .w:nth-child(1) { animation-delay: .28s; }
+  #program.active.armed .atf-h .w:nth-child(2) { animation-delay: .40s; }
+  #program.active.armed .atf-h .w:nth-child(3) { animation-delay: .52s; }
+  #program.active.armed .atf-h .w:nth-child(4) { animation-delay: .64s; }
+  .atf-h .w.accent { color: var(--amber); }
+  @keyframes wordIn { to { opacity: 1; transform: none; filter: blur(0); } }
+
+  .usp-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 20px; }
+  .usp { font-size: 12.5px; color: #D3DAEB; line-height: 1.4; display: flex; gap: 9px; align-items: flex-start; }
+  .usp svg { flex-shrink: 0; margin-top: 1px; }
+  .usp svg path { stroke-dasharray: 30; stroke-dashoffset: 30; }
+  #program.active .usp svg path { animation: draw .5s var(--ease) forwards; }
+  #program.active .usp:nth-child(1) svg path { animation-delay: .8s; }
+  #program.active .usp:nth-child(2) svg path { animation-delay: .92s; }
+  #program.active .usp:nth-child(3) svg path { animation-delay: 1.04s; }
+  #program.active .usp:nth-child(4) svg path { animation-delay: 1.16s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  .capture { border-top: 1px solid var(--line); padding-top: 18px; margin-top: auto; }
+  .capture-q { font-size: 14px; line-height: 1.35; font-weight: 700; letter-spacing: -.01em; margin-bottom: 13px; }
+  .wa-input {
+    width: 100%; background: var(--navy-2); border: 1px solid var(--line-2);
+    border-radius: var(--r-btn); padding: 14px 13px; color: var(--text);
+    font-family: var(--sans); font-size: 15px; margin-bottom: 10px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .wa-input::placeholder { color: var(--text-3); }
+  .wa-input:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(245,133,15,.18); }
+  .wa-input.error { border-color: var(--med-fg); box-shadow: 0 0 0 3px rgba(232,137,111,.16); }
+  .field-err { font-size: 11.5px; color: var(--med-fg); margin: -5px 2px 9px; min-height: 15px; }
+
+  .success { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 13px; padding: 10px 4px; }
+  .success .check { width: 50px; height: 50px; border-radius: 50%; background: var(--ok-bg); border: 1.5px solid var(--ok-border); display: flex; align-items: center; justify-content: center; color: var(--ok-fg); animation: pop .5s var(--ease); }
+  @keyframes pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+
+  .fadein { animation: fade .45s var(--ease); }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: .12s !important; }
+    .rise, .arow, .atf-h .w { opacity: 1 !important; transform: none !important; filter: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app" data-scene="0">
+
+  <!-- Persistent parallax world -->
+  <div class="world" aria-hidden="true">
+    <div class="layer l-atmos"></div>
+    <div class="layer l-field"></div>
+    <div class="layer l-sphere"></div>
+  </div>
+
+  <div class="stage">
+
+    <!-- 0 · Narasi (hero) -->
+    <section class="screen story active" id="narasi" data-index="0">
+      <div class="col-left">
+        <p class="eyebrow rise d1">Program baru · Mulai September 2026</p>
+        <h1 class="rise d1">Tiap hari, jutaan serangan siber ngincer perusahaan di seluruh dunia.</h1>
+        <p class="body rise d2">Yang nangkis serangannya? Tim <span class="accent">Cybersecurity</span>. Sekarang, kamu yang ambil alih. 30 detik buat nemuin satu serangan asli.</p>
+      </div>
+      <div class="col-right">
+        <div class="hero-panel rise d3" aria-hidden="true">
+          <div class="term-bar">
+            <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot live"></span>
+            <span class="term-title">soc — alert queue · live</span>
+          </div>
+          <div class="term-body" id="termBody"></div>
+        </div>
+      </div>
+      <button class="btn cta rise d4" onclick="goTo('pick')">Mulai</button>
+    </section>
+
+    <!-- 1 · Pilih serangannya -->
+    <section class="screen story" id="pick" data-index="1">
+      <div class="col-left">
+        <p class="eyebrow dim rise d1">Triage · 5 sinyal masuk</p>
+        <p class="pick-head rise d1">Sistem nangkep 5 aktivitas mencurigakan. Cuma <b>1</b> yang beneran serangan.</p>
+        <p class="pick-sub rise d2">Menurut kamu, yang mana?</p>
+
+        <div class="timer rise d2" id="timer">
+          <span class="timer-num" id="timerNum">00:30</span>
+          <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+        </div>
+      </div>
+      <div class="col-right">
+        <div class="signals" id="signals"><!-- rows injected by JS --></div>
+        <p class="nudge" id="nudge">Waktu habis — tapi tenang, pilih aja.</p>
+      </div>
+      <button class="btn outline cta" id="confirmBtn" disabled onclick="goTo('reveal')">Lihat jawabannya</button>
+    </section>
+
+    <!-- 2 · Ternyata -->
+    <section class="screen story" id="reveal" data-index="2">
+      <div class="col-left">
+        <p class="eyebrow dim rise d1">Hasil triage</p>
+        <h2 class="rise d2" style="margin-bottom:12px">Ternyata, ini serangannya.</h2>
+        <p class="body rise d3" style="margin-bottom:12px">Ada device baru yang daftar ke sebuah akun. Kedengeran biasa, kan? Tapi jam 3 pagi, dari lokasi yang nggak dikenal? Itu beda cerita. Tandanya, ada indikasi seseorang lagi ngambil alih akun salah satu karyawan.</p>
+        <p class="body rise d3" style="color:#E7ECF8">Di keamanan siber, alarm yang paling kenceng belum tentu bahaya yang paling nyata. Itulah yang bikin kerjaan ini nggak segampang keliatannya.</p>
+        <div class="spacer"></div>
+        <button class="btn rise d4" onclick="goTo('transisi')">Lanjut</button>
+      </div>
+      <div class="col-right col-right--mid">
+        <div class="reveal-card rise d1">
+          <div class="atop">
+            <span class="pill OK">LOW</span>
+            <span class="atxt">New device · MFA · 03:12 · new location</span>
+          </div>
+        </div>
+        <p class="verdict rise d2" id="verdict"></p>
+      </div>
+    </section>
+
+    <!-- 3 · Transisi -->
+    <section class="screen story" id="transisi" data-index="3">
+      <div class="col-left">
+        <div class="spacer"></div>
+        <p class="eyebrow rise d1">Selamat, defender</p>
+        <h1 class="rise d1">Barusan, kamu baru aja nyobain satu bagian kecil dari kerjaan seorang cybersecurity defender.</h1>
+        <p class="body rise d2" style="margin-bottom:20px">Aslinya, jauh lebih luas dari ini.</p>
+        <p class="body accent rise d3" style="font-weight:600">Buat kamu yang pengen belajar lebih dalam, ada program baru dari RevoU:</p>
+        <div class="spacer"></div>
+        <button class="btn rise d4" onclick="goTo('program')">Lihat programnya</button>
+      </div>
+      <div class="col-right" aria-hidden="true"></div>
+    </section>
+
+    <!-- 4 · Program reveal + capture (ATF hero) -->
+    <section class="screen" id="program" data-index="4">
+      <div class="logobar">
+        <span class="logo-revou"><span class="mark">R</span><span class="wm">revou</span></span>
+        <span class="sep"></span>
+        <span class="logo-binus"><span class="b1">BINUS</span><span class="b2">UNIVERSITY</span></span>
+        <span class="sep"></span>
+        <span class="logo-gn"><span class="g1">Great</span><span class="g2">Nusa</span></span>
+      </div>
+
+      <div class="atf-body">
+        <p class="eyebrow">12-week program · Starts September 2026 · Jakarta + online</p>
+        <h1 class="atf-h" id="atfHeadline">
+          <span class="w">Applied</span> <span class="w">Cybersecurity</span> <span class="w">with</span> <span class="w accent">AI</span>
+        </h1>
+        <p class="body" style="margin-bottom:20px">Detect threats, respond to incidents, and learn to supervise AI in real security work — built with <span class="accent">BINUS Faculty</span> and <span class="accent">AWS</span>.</p>
+
+        <div class="usp-list">
+          <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Taught by BINUS faculty and industry experts</span>
+          <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Defend live infrastructure inside AWS Labs</span>
+          <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Learn to supervise AI and catch when it's wrong</span>
+          <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Defense-first by design, where the work actually is</span>
+        </div>
+
+        <div class="capture" id="capture">
+          <p class="capture-q">Mau jadi yang pertama tau ketika pendaftaran dibuka?</p>
+          <form id="waForm" novalidate>
+            <input class="wa-input" id="waInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="nomor WhatsApp kamu">
+            <p class="field-err" id="waErr"></p>
+            <button class="btn" type="submit">Kabari saya</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var TIMER_SECONDS = 30;
+  var app = document.getElementById("app");
+  var order = ["narasi", "pick", "reveal", "transisi", "program"];
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var state = { selectedSignalId: null, timerExpired: false, timerId: null, termTimer: null };
+
+  document.getElementById("program").classList.add("armed"); // arm headline reveal
+
+  var signals = [
+    { id: "s1", severity: "MED", title: "Multiple failed logins · finance-db", gloss: "Login gagal berkali-kali ke database", isAttack: false },
+    { id: "s2", severity: "MED", title: "Firewall blocked · 185.220.101.x", gloss: "Firewall ngeblok satu koneksi keluar", isAttack: false },
+    { id: "s3", severity: "LOW", title: "Password reset · user_htan", gloss: "User reset password lewat self-service", isAttack: false },
+    { id: "s4", severity: "LOW", title: "New device · MFA · 03:12 · new location", gloss: "Device baru didaftarin ke akun", isAttack: true },
+    { id: "s5", severity: "LOW", title: "File access · /shared/payroll", gloss: "Akses ke satu file di folder bersama", isAttack: false }
+  ];
+
+  // ---- Scene navigation (drives the parallax descent) ----
+  window.goTo = function (id) {
+    var current = document.querySelector(".screen.active");
+    if (current) {
+      if (current.id === "pick") stopTimer();
+      if (current.id === "narasi") stopTermFeed();
+      current.classList.remove("active");
+      current.classList.add("past");
+    }
+    if (id === "reveal") setVerdict();
+
+    var target = document.getElementById(id);
+    target.classList.remove("past");
+    target.classList.add("active");
+    target.scrollTop = 0;
+
+    app.setAttribute("data-scene", String(order.indexOf(id)));
+
+    if (id === "narasi") startTermFeed();
+    if (id === "pick") enterPick();
+    if (id === "reveal") revealSequence();
+  };
+
+  // ---- Narasi: live terminal feed ----
+  var feedLines = [
+    { t: "02:41", txt: 'failed login · svc_backup' },
+    { t: "02:44", sev: "med", txt: 'firewall blocked · 185.220.101.x' },
+    { t: "02:58", txt: 'password reset · user_htan' },
+    { t: "03:12", sev: "low", txt: 'new device · MFA · new location', cursor: true },
+    { t: "03:15", txt: 'file access · /shared/payroll' }
+  ];
+  function renderFeedLine(l, isNew) {
+    var sev = l.sev ? '<span class="sev-' + l.sev + '">' + l.sev.toUpperCase() + '</span> ' : '';
+    var cur = l.cursor ? '<span class="cursor"></span>' : '';
+    return '<div class="term-line' + (isNew ? ' new' : '') + '"><span class="t">' + l.t + '</span> ' + sev + l.txt + cur + '</div>';
+  }
+  function startTermFeed() {
+    var body = document.getElementById("termBody");
+    if (!body) return;
+    stopTermFeed();
+    if (reduce) { body.innerHTML = feedLines.map(function (l) { return renderFeedLine(l, false); }).join(""); return; }
+    // show first 2 immediately, then stream the rest to feel "live"
+    body.innerHTML = feedLines.slice(0, 2).map(function (l) { return renderFeedLine(l, false); }).join("");
+    var i = 2;
+    state.termTimer = setInterval(function () {
+      if (i >= feedLines.length) { i = 2; body.innerHTML = feedLines.slice(0, 2).map(function (l) { return renderFeedLine(l, false); }).join(""); return; }
+      // keep only last 4 lines visible
+      var lines = body.querySelectorAll(".term-line");
+      if (lines.length >= 4 && lines[0]) lines[0].remove();
+      body.insertAdjacentHTML("beforeend", renderFeedLine(feedLines[i], true));
+      i++;
+    }, 1400);
+  }
+  function stopTermFeed() { if (state.termTimer) { clearInterval(state.termTimer); state.termTimer = null; } }
+
+  // ---- Pick screen ----
+  function renderSignals() {
+    var wrap = document.getElementById("signals");
+    wrap.classList.remove("dealt");
+    wrap.classList.add("arming");
+    wrap.innerHTML = "";
+    signals.forEach(function (sig, idx) {
+      var row = document.createElement("button");
+      row.type = "button"; row.className = "arow"; row.dataset.id = sig.id;
+      row.style.transitionDelay = (reduce ? 0 : (0.06 * idx)) + "s";
+      row.innerHTML =
+        '<div class="atop"><span class="pill ' + sig.severity + '">' + sig.severity + '</span>' +
+        '<span class="atxt">' + sig.title + '</span></div>' +
+        '<span class="agl">' + sig.gloss + '</span>';
+      row.addEventListener("click", function () { selectSignal(sig.id); });
+      wrap.appendChild(row);
+    });
+    // deal them in on next frame
+    requestAnimationFrame(function () { requestAnimationFrame(function () { wrap.classList.add("dealt"); }); });
+  }
+
+  function selectSignal(id) {
+    state.selectedSignalId = id;
+    document.querySelectorAll("#signals .arow").forEach(function (row) {
+      row.classList.toggle("selected", row.dataset.id === id);
+    });
+    var btn = document.getElementById("confirmBtn");
+    btn.disabled = false; btn.classList.remove("outline");
+  }
+
+  function enterPick() {
+    state.selectedSignalId = null; state.timerExpired = false;
+    renderSignals();
+    var btn = document.getElementById("confirmBtn");
+    btn.disabled = true; btn.classList.add("outline");
+    document.getElementById("nudge").classList.remove("show");
+    document.getElementById("timer").classList.remove("expired");
+    startTimer();
+  }
+
+  // ---- Countdown ----
+  function fmt(sec) { var m = Math.floor(sec / 60), s = sec % 60; return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); }
+  function startTimer() {
+    stopTimer();
+    var remaining = TIMER_SECONDS;
+    var num = document.getElementById("timerNum"), fill = document.getElementById("timerFill");
+    num.textContent = fmt(remaining);
+    fill.style.transition = "none"; fill.style.transform = "scaleX(1)";
+    void fill.offsetWidth;
+    fill.style.transition = "transform 1s linear, background .3s ease";
+    state.timerId = setInterval(function () {
+      remaining -= 1;
+      num.textContent = fmt(Math.max(remaining, 0));
+      fill.style.transform = "scaleX(" + Math.max(remaining, 0) / TIMER_SECONDS + ")";
+      if (remaining <= 0) { stopTimer(); onTimerExpire(); }
+    }, 1000);
+  }
+  function stopTimer() { if (state.timerId) { clearInterval(state.timerId); state.timerId = null; } }
+  function onTimerExpire() {
+    state.timerExpired = true;
+    document.getElementById("timer").classList.add("expired");
+    document.getElementById("nudge").classList.add("show");
+  }
+
+  // ---- Reveal ----
+  function setVerdict() {
+    var v = document.getElementById("verdict");
+    if (!state.selectedSignalId) { v.textContent = ""; v.className = "verdict"; return; }
+    var picked = signals.filter(function (s) { return s.id === state.selectedSignalId; })[0];
+    if (picked && picked.isAttack) { v.textContent = "Tepat. Kamu nemuin yang asli."; v.className = "verdict hit"; }
+    else { v.textContent = "Pilihan kamu masuk akal — tapi bukan ini serangannya."; v.className = "verdict miss"; }
+  }
+  function revealSequence() { /* lock-on handled by CSS on #reveal.active */ }
+
+  // ---- Program capture ----
+  var form = document.getElementById("waForm");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("waInput"), err = document.getElementById("waErr");
+    var raw = input.value.trim(), digits = raw.replace(/[^0-9]/g, "");
+    if (raw === "") { showFieldError(input, err, "Isi dulu nomor WhatsApp kamu ya."); return; }
+    if (digits.length < 8) { showFieldError(input, err, "Kayaknya nomornya belum lengkap."); return; }
+    input.classList.remove("error"); err.textContent = ""; showSuccess();
+  });
+  function showFieldError(input, err, msg) { input.classList.add("error"); err.textContent = msg; input.focus(); }
+  function showSuccess() {
+    document.getElementById("capture").innerHTML =
+      '<div class="success fadein">' +
+        '<div class="check"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+        '<p style="font-size:14.5px; font-weight:700; line-height:1.4">Sip! Kamu bakal jadi yang pertama kami kabari pas pendaftaran buka.</p>' +
+        '<p class="body" style="font-size:12.5px">Sampai ketemu di Applied Cybersecurity with AI.</p>' +
+      '</div>';
+  }
+
+  // kick off the opening scene's life
+  startTermFeed();
+})();
+</script>
+</body>
+</html>
