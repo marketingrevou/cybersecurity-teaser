@@ -414,13 +414,14 @@
     background: radial-gradient(120% 140% at 50% 50%, #FFFFFF 0%, #EDF1FF 100%);
     box-shadow: 0 6px 20px rgba(6,10,26,.35), 0 1px 0 rgba(255,255,255,.6) inset;
     pointer-events: none;
-    transition: top 1.2s cubic-bezier(.4,0,.2,1), left 1.2s cubic-bezier(.4,0,.2,1), transform 1.2s cubic-bezier(.4,0,.2,1);
+    transition: left 1.2s cubic-bezier(.4,0,.2,1), transform 1.2s cubic-bezier(.4,0,.2,1);
   }
-  /* Mobile: during the countdown, glide the logo pill to screen center and hold it */
+  /* Mobile: during the countdown, slide the logo pill horizontally to centre
+     (X axis only — it keeps its original top position) and hold it there. */
   @media (max-width: 879px) {
     .app[data-countdown="1"] .logo-pill {
-      top: 50%; left: 50%;
-      transform: translate(-50%, calc(-50% - 96px)); /* sit just above the countdown number */
+      left: 50%;
+      transform: translateX(-50%);
     }
   }
   .logo-pill img { height: 26px; width: auto; max-width: 100%; display: block; }
