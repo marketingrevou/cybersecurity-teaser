@@ -153,8 +153,41 @@
     .l-field { transform: translateY(calc(var(--scene) * -7%)); }
   }
 
+  /* ============ COUNTDOWN INTERSTITIAL ============ */
+  .countdown {
+    position: absolute; inset: 0; z-index: 5;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .5s var(--ease), visibility .5s;
+  }
+  .app[data-countdown="1"] .countdown { opacity: 1; visibility: visible; }
+  /* blank the stage while counting down */
+  .app[data-countdown="1"] .stage { opacity: 0; transition: opacity .5s var(--ease); pointer-events: none; }
+  /* Sphere glides to dead center and grows. Kill any scene animation so the
+     transition (not a competing keyframe) drives the move — smooth both ways.
+     Slower, eased timing makes the approach + exit feel natural. */
+  .app[data-countdown="1"] .l-sphere,
+  .app[data-countdown="1"][data-scene] .l-sphere {
+    top: 50% !important; right: 50% !important; bottom: auto !important; left: auto !important;
+    width: 140% !important;
+    transform: translate(50%, -50%) !important;
+    animation: none !important;
+    transition: transform 1.6s cubic-bezier(.4,0,.2,1), top 1.6s cubic-bezier(.4,0,.2,1),
+                right 1.6s cubic-bezier(.4,0,.2,1), width 1.6s cubic-bezier(.4,0,.2,1),
+                filter 1.2s ease !important;
+    filter: brightness(1.18);
+  }
+  .cd-num {
+    font-family: var(--sans); font-weight: 800; letter-spacing: -.03em;
+    font-size: clamp(90px, 26vw, 190px); line-height: 1; color: #fff;
+    text-shadow: 0 0 60px rgba(96,132,255,.6), 0 0 24px rgba(245,133,15,.35);
+    /* opacity + transform are driven inline by JS (bulletproof, no anim replay) */
+    opacity: 0; transform: scale(1.4);
+    transition: opacity .3s var(--ease), transform .3s var(--ease);
+  }
+
   /* ============ STAGE + SCREENS ============ */
-  .stage { position: absolute; inset: 0; z-index: 1; }
+  .stage { position: absolute; inset: 0; z-index: 1; transition: opacity .5s var(--ease); }
 
   .screen {
     position: absolute; inset: 0;
@@ -432,22 +465,28 @@
   .atf-sub { font-size: 15px; max-width: 520px; }
 
   /* USP rotator — one benefit at a time, cycling (compact, not "texty") */
-  .usp-rotator { margin-top: 4px; max-width: 520px; width: 100%; }
+  .usp-rotator { margin-top: 4px; max-width: 520px; width: 100%; --usp-row: 34px; }
+  /* viewport shows 3 rows: the centered (active) one + a dimmed peek above & below */
+  .usp-viewport {
+    position: relative; height: calc(var(--usp-row) * 3); overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 32%, #000 68%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 32%, #000 68%, transparent 100%);
+  }
   .usp-track {
-    position: relative; min-height: 40px;
-    display: flex; align-items: center; justify-content: center; /* mobile: centered */
+    display: flex; flex-direction: column;
+    transition: transform .6s var(--ease); will-change: transform;
   }
-  @media (min-width: 880px) and (min-height: 560px) { .usp-track { justify-content: flex-start; } }
+  .usp-track.no-anim { transition: none; }
   .usp {
-    position: absolute; inset: 0;
-    font-size: 14px; color: #E1E7F5; line-height: 1.4; font-weight: 500;
-    display: flex; gap: 10px; align-items: center; justify-content: inherit;
-    opacity: 0; transform: translateY(10px);
-    transition: opacity .5s var(--ease), transform .5s var(--ease);
-    pointer-events: none;
+    height: var(--usp-row); flex: 0 0 var(--usp-row);
+    font-size: 14px; color: #E1E7F5; line-height: 1.3; font-weight: 500;
+    display: flex; gap: 10px; align-items: center; justify-content: center; /* mobile: centered */
+    opacity: .28; transform: scale(.92);
+    transition: opacity .6s var(--ease), transform .6s var(--ease);
   }
-  .usp.is-active { opacity: 1; transform: none; }
-  .usp.is-out { opacity: 0; transform: translateY(-10px); }
+  @media (min-width: 880px) and (min-height: 560px) { .usp { justify-content: flex-start; } }
+  /* the row currently at center is bright & full size */
+  .usp.is-active { opacity: 1; transform: scale(1); }
   .usp svg { flex-shrink: 0; }
   /* progress dots */
   .usp-dots { display: flex; gap: 6px; margin-top: 16px; justify-content: center; }
@@ -497,9 +536,12 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition-duration: .12s !important; }
     .rise, .arow, .atf-h .w, .capture-card { opacity: 1 !important; transform: none !important; filter: none !important; }
-    /* reduced-motion: show USPs as a plain stacked list, no rotation */
-    .usp-track { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-height: 0; }
-    .usp { position: static; inset: auto; opacity: 1 !important; transform: none !important; }
+    /* reduced-motion: show USPs as a plain stacked list, no wheel/rotation */
+    .usp-viewport { height: auto !important; overflow: visible !important;
+      -webkit-mask-image: none !important; mask-image: none !important; }
+    .usp-track { display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+      transform: none !important; }
+    .usp { height: auto !important; flex: none !important; opacity: 1 !important; transform: none !important; }
     .usp-dots { display: none; }
   }
 </style>
@@ -525,7 +567,7 @@
     <section class="screen story active" id="narasi" data-index="0">
       <div class="col-left">
         <p class="eyebrow rise d1">Program baru · Mulai September 2026</p>
-        <h1 class="rise d1">Tiap hari, jutaan serangan siber ngincer perusahaan di seluruh dunia.</h1>
+        <h1 class="rise d1">Tiap hari, jutaan serangan siber mengincar perusahaan di seluruh dunia.</h1>
         <p class="body rise d2">Yang nangkis serangannya? Tim <span class="accent">Cybersecurity</span>. Sekarang, kamu yang ambil alih. 30 detik buat nemuin satu serangan asli.</p>
       </div>
       <div class="col-right">
@@ -587,7 +629,7 @@
         <p class="body accent rise d3" style="font-weight:600">Buat kamu yang pengen belajar lebih dalam, ada program baru dari RevoU.</p>
       </div>
       <div class="col-right" aria-hidden="true"></div>
-      <button class="btn cta rise d4" onclick="goTo('program')">Lihat programnya <span class="arr">→</span></button>
+      <button class="btn cta rise d4" onclick="countdownThenGo('program')">Lihat programnya <span class="arr">→</span></button>
     </section>
 
     <!-- 4 · Program reveal + capture (ATF hero) -->
@@ -602,11 +644,13 @@
           <p class="body atf-sub">Detect threats, respond to incidents, and learn to supervise AI in real security work — built with <span class="accent">BINUS Faculty</span> and <span class="accent">AWS</span>.</p>
 
           <div class="usp-rotator" id="uspRotator" aria-live="polite">
+            <div class="usp-viewport">
             <div class="usp-track" id="uspTrack">
               <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Taught by BINUS faculty and industry experts</span>
               <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Defend live infrastructure inside AWS Labs</span>
               <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Learn to supervise AI and catch when it's wrong</span>
               <span class="usp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#F5850F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Defense-first by design, where the work actually is</span>
+            </div>
             </div>
             <div class="usp-dots" id="uspDots" aria-hidden="true"></div>
           </div>
@@ -627,6 +671,11 @@
     </section>
 
   </div>
+
+  <!-- Countdown interstitial (reveal → transisi hand-off) -->
+  <div class="countdown" id="countdown" aria-hidden="true">
+    <span class="cd-num" id="cdNum"></span>
+  </div>
 </div>
 
 <script>
@@ -638,7 +687,8 @@
   var order = ["narasi", "pick", "reveal", "transisi", "program"];
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  var state = { selectedSignalId: null, timerExpired: false, timerId: null, termTimer: null };
+  var state = { selectedSignalId: null, timerExpired: false, timerId: null, termTimer: null, revealIdle: null, cdRunning: false, cdTimers: [] };
+  var REVEAL_IDLE_MS = 8000; // auto-trigger countdown after this idle time on reveal
 
   document.getElementById("program").classList.add("armed"); // arm headline reveal
 
@@ -656,6 +706,7 @@
     if (current) {
       if (current.id === "pick") stopTimer();
       if (current.id === "narasi") stopTermFeed();
+      if (current.id === "transisi") stopTransisiIdle();
       current.classList.remove("active");
       current.classList.add("past");
     }
@@ -670,6 +721,7 @@
     if (id === "narasi") startTermFeed();
     if (id === "pick") enterPick();
     if (id === "reveal") { setRevealHeadline(); revealSequence(); }
+    if (id === "transisi") startTransisiIdle();
     if (id === "program") { ensureProgramVisible(); startUspRotator(); }
     else stopUspRotator();
 
@@ -689,38 +741,64 @@
     }, 1200);
   }
 
-  // ---- USP rotator (program scene): reveal benefits one at a time ----
+  // ---- USP rotator (program scene): infinite vertical wheel ----
+  // The track scrolls up one row at a time; the centered row is bright while the
+  // rows peeking above/below are dimmed. Clones at both ends let it loop forever.
   function startUspRotator() {
     var track = document.getElementById("uspTrack");
     var dotsWrap = document.getElementById("uspDots");
     if (!track) return;
     stopUspRotator();
-    var items = Array.prototype.slice.call(track.querySelectorAll(".usp"));
-    if (!items.length) return;
 
-    // build dots once
+    // reset any clones from a previous run so re-entry is idempotent
+    var reals = Array.prototype.slice.call(track.querySelectorAll(".usp:not(.usp-clone)"));
+    if (!reals.length) return;
+    Array.prototype.slice.call(track.querySelectorAll(".usp-clone")).forEach(function (c) { c.remove(); });
+
+    var n = reals.length;
+
+    // build dots once (one per real USP)
     if (dotsWrap && !dotsWrap.children.length) {
-      items.forEach(function () { dotsWrap.appendChild(document.createElement("i")); });
+      reals.forEach(function () { dotsWrap.appendChild(document.createElement("i")); });
     }
     var dots = dotsWrap ? Array.prototype.slice.call(dotsWrap.children) : [];
 
-    function show(idx) {
-      items.forEach(function (el, i) {
-        el.classList.toggle("is-active", i === idx);
-        el.classList.toggle("is-out", i !== idx);
-      });
-      dots.forEach(function (d, i) { d.classList.toggle("on", i === idx); });
+    if (reduce) { reals.forEach(function (el) { el.classList.add("is-active"); }); return; }
+
+    // Clone the last item to the front and the first to the back so a neighbor
+    // is always visible in the peek rows. Layout: [cloneLast, r0..rN-1, cloneFirst]
+    var cloneLast = reals[n - 1].cloneNode(true); cloneLast.classList.add("usp-clone");
+    var cloneFirst = reals[0].cloneNode(true); cloneFirst.classList.add("usp-clone");
+    track.insertBefore(cloneLast, reals[0]);
+    track.appendChild(cloneFirst);
+
+    var all = Array.prototype.slice.call(track.querySelectorAll(".usp"));
+    var ROW = 34; // must match --usp-row in CSS
+
+    // pos = index into `all`; start at the first real item (offset 1 past cloneLast)
+    var pos = 1;
+
+    function render(animate) {
+      track.classList.toggle("no-anim", !animate);
+      // shift so the row at `pos` sits in the center slot of the 3-row viewport
+      track.style.transform = "translateY(" + (-(pos - 1) * ROW) + "px)";
+      all.forEach(function (el, i) { el.classList.toggle("is-active", i === pos); });
+      // real index for the dots (pos 1..n map to 0..n-1)
+      var real = ((pos - 1) % n + n) % n;
+      dots.forEach(function (d, i) { d.classList.toggle("on", i === real); });
     }
 
-    if (reduce) { items.forEach(function (el) { el.classList.add("is-active"); }); return; }
+    render(false);
 
-    state.uspIdx = 0;
-    // small delay so it starts after the headline reveal
     state.uspStart = setTimeout(function () {
-      show(0);
       state.uspTimer = setInterval(function () {
-        state.uspIdx = (state.uspIdx + 1) % items.length;
-        show(state.uspIdx);
+        pos++;
+        render(true);
+        // when we've animated onto the trailing clone (the first item), snap
+        // back to the real first item with no animation to loop seamlessly
+        if (pos > n) {
+          setTimeout(function () { pos = 1; render(false); }, 620); // > transition duration
+        }
       }, 2600);
     }, 700);
   }
@@ -855,6 +933,69 @@
     }
   }
   function revealSequence() { /* lock-on handled by CSS on #reveal.active */ }
+
+  // ---- Transisi idle: auto-launch the countdown into the program reveal ----
+  function startTransisiIdle() {
+    stopTransisiIdle();
+    state.revealIdle = setTimeout(function () { countdownThenGo("program"); }, REVEAL_IDLE_MS);
+    document.addEventListener("pointerdown", bumpTransisiIdle, true);
+    document.addEventListener("wheel", bumpTransisiIdle, { passive: true, capture: true });
+  }
+  function bumpTransisiIdle() {
+    if (state.cdRunning) return;
+    if (state.revealIdle) { clearTimeout(state.revealIdle); state.revealIdle = setTimeout(function () { countdownThenGo("program"); }, REVEAL_IDLE_MS); }
+  }
+  function stopTransisiIdle() {
+    if (state.revealIdle) { clearTimeout(state.revealIdle); state.revealIdle = null; }
+    document.removeEventListener("pointerdown", bumpTransisiIdle, true);
+    document.removeEventListener("wheel", bumpTransisiIdle, { capture: true });
+  }
+
+  // ---- Countdown interstitial: blank scene, sphere to center, 3-2-1, then go ----
+  window.countdownThenGo = function (targetId) {
+    if (state.cdRunning) return;        // guard against double-trigger (click + idle)
+    state.cdRunning = true;
+    stopTransisiIdle();
+
+    var num = document.getElementById("cdNum");
+    var per = reduce ? 350 : 850;        // ms per digit
+    var lead = reduce ? 80 : 650;        // let the sphere glide toward center first
+
+    app.setAttribute("data-countdown", "1");
+
+    var seq = [3, 2, 1];
+    function tick(i) {
+      if (i >= seq.length) {
+        // hold a beat at center (anticipation peak) before revealing the program
+        num.style.opacity = "0"; num.style.transform = "scale(.82)";
+        var t = setTimeout(finish, reduce ? 150 : 560);
+        state.cdTimers.push(t);
+        return;
+      }
+      num.textContent = seq[i];
+      num.style.opacity = "1"; num.style.transform = "scale(1)";
+      var out = setTimeout(function () { num.style.opacity = "0"; num.style.transform = "scale(.82)"; }, per - 230);
+      state.cdTimers.push(out);
+      var t = setTimeout(function () { tick(i + 1); }, per);
+      state.cdTimers.push(t);
+    }
+    function finish() {
+      num.textContent = "";
+      num.style.opacity = "0"; num.style.transform = "scale(1.4)";
+      // reveal the program scene UNDER the overlay first, then lift the overlay so
+      // the sphere glides smoothly from center to its program spot (no snap)
+      goTo(targetId);
+      var lift = setTimeout(function () {
+        app.removeAttribute("data-countdown");
+        state.cdRunning = false;
+      }, reduce ? 40 : 120);
+      state.cdTimers.forEach(clearTimeout); state.cdTimers = [lift];
+    }
+
+    // let the stage fade / sphere start centering, then begin the digits
+    var start = setTimeout(function () { tick(0); }, lead);
+    state.cdTimers.push(start);
+  };
 
   // ---- Program capture ----
   var form = document.getElementById("waForm");
