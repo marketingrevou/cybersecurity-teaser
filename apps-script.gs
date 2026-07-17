@@ -32,10 +32,8 @@ function doPost(e) {
     var sheet = getSheet_();
     sheet.appendRow([
       new Date(),                          // Timestamp
-      phone,                               // WhatsApp number (raw)
-      String(data.digits || ''),           // Digits only
-      String(data.source || 'teaser'),     // Source label
-      String(data.userAgent || '')         // Browser UA (optional)
+      phone,                               // WhatsApp number
+      String(data.source || 'direct')      // utm_source
     ]);
 
     return json_({ ok: true });
@@ -55,7 +53,7 @@ function getSheet_() {
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(['Timestamp', 'WhatsApp', 'Digits', 'Source', 'User Agent']);
+    sheet.appendRow(['Timestamp', 'WhatsApp', 'Source']);
     sheet.setFrozenRows(1);
   }
   return sheet;

@@ -411,6 +411,14 @@
     background: radial-gradient(120% 140% at 50% 50%, #FFFFFF 0%, #EDF1FF 100%);
     box-shadow: 0 6px 20px rgba(6,10,26,.35), 0 1px 0 rgba(255,255,255,.6) inset;
     pointer-events: none;
+    transition: top 1.2s cubic-bezier(.4,0,.2,1), left 1.2s cubic-bezier(.4,0,.2,1), transform 1.2s cubic-bezier(.4,0,.2,1);
+  }
+  /* Mobile: during the countdown, glide the logo pill to screen center and hold it */
+  @media (max-width: 879px) {
+    .app[data-countdown="1"] .logo-pill {
+      top: 50%; left: 50%;
+      transform: translate(-50%, calc(-50% - 96px)); /* sit just above the countdown number */
+    }
   }
   .logo-pill img { height: 26px; width: auto; max-width: 100%; display: block; }
   @media (min-width: 880px) and (min-height: 560px) {
@@ -1039,17 +1047,17 @@
     if (raw === "") { showFieldError(input, err, "Isi dulu nomor WhatsApp kamu ya."); return; }
     if (digits.length < 8) { showFieldError(input, err, "Kayaknya nomornya belum lengkap."); return; }
     input.classList.remove("error"); err.textContent = "";
-    sendLead(raw, digits);
+    sendLead(raw);
     showSuccess();
   });
-  function sendLead(raw, digits) {
+  function getSource() {
+    var m = new URLSearchParams(window.location.search).get("utm_source");
+    return m ? m : "direct";
+  }
+  function sendLead(raw) {
     if (!WA_ENDPOINT || WA_ENDPOINT.indexOf("PASTE_YOUR_DEPLOYMENT_ID") !== -1) return;
-    var payload = JSON.stringify({
-      phone: raw,
-      digits: digits,
-      source: "cybersecurity-teaser",
-      userAgent: navigator.userAgent
-    });
+    var source = getSource();
+    var payload = JSON.stringify({ phone: raw, source: source });
     try {
       // text/plain avoids a CORS preflight that Apps Script can't answer.
       fetch(WA_ENDPOINT, {
@@ -1061,7 +1069,7 @@
     } catch (e) {
       // Fallback for very old browsers.
       var img = new Image();
-      img.src = WA_ENDPOINT + "?phone=" + encodeURIComponent(raw) + "&digits=" + encodeURIComponent(digits) + "&source=cybersecurity-teaser";
+      img.src = WA_ENDPOINT + "?phone=" + encodeURIComponent(raw) + "&source=" + encodeURIComponent(source);
     }
   }
   function showFieldError(input, err, msg) { input.classList.add("error"); err.textContent = msg; input.focus(); }
